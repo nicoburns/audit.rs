@@ -8,7 +8,7 @@ use gloo_net::http::Request;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use similar::{ChangeTag, TextDiff};
+use similar::{capture_diff_slices, Algorithm, ChangeTag, DiffTag};
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::Read,
@@ -18,6 +18,33 @@ use std::{
 };
 use tar::Archive;
 use url::Url;
+
+/// Splits `data` into lines, keeping the line endings.
+fn split_lines(data: &Bytes) -> Vec<Bytes> {
+    let mut lines = vec![];
+    let mut start = 0;
+    for (index, byte) in data.iter().enumerate() {
+        if *byte == b'\n' {
+            lines.push(data.slice(start..index + 1));
+            start = index + 1;
+        }
+    }
+    if start < data.len() {
+        lines.push(data.slice(start..));
+    }
+    lines
+}
+
+/// Key used to compare lines: the content without its line ending, and whether it has one.
+///
+/// This treats `\r\n` and `\n` line endings as equal, so that a crate version published with
+/// different line endings does not show every line as changed.
+fn line_key(line: &[u8]) -> (&[u8], bool) {
+    match line.strip_suffix(b"\n") {
+        Some(line) => (line.strip_suffix(b"\r").unwrap_or(line), true),
+        None => (line, false),
+    }
+}
 
 /// Returns the offset of `inner` within `outer`, if `inner` is a subslice of `outer`.
 pub(crate) fn subslice_offset(outer: &[u8], inner: &[u8]) -> Option<usize> {
@@ -456,30 +483,28 @@ impl VersionDiff {
             let left = left.files.get(path).cloned().unwrap_or_default();
             let right = right.files.get(path).cloned().unwrap_or_default();
 
-            // generate text diff
-            let diff = TextDiff::from_lines(&left[..], &right[..]);
+            // generate line diff
+            let left_lines = split_lines(&left);
+            let right_lines = split_lines(&right);
+            let left_keys: Vec<_> = left_lines.iter().map(|line| line_key(line)).collect();
+            let right_keys: Vec<_> = right_lines.iter().map(|line| line_key(line)).collect();
+            let ops = capture_diff_slices(Algorithm::Myers, &left_keys, &right_keys);
 
             // collect changes
-            let changes: Vec<_> = diff
-                .iter_all_changes()
-                .map(|change| {
-                    // soo... we do an awkward little dance here. out data is a Bytes struct, which we
-                    // can cheaply get subslices from. the diff algorithm gets a &[u8] and every
-                    // change gives us a &[u8]. now, we want to figure out what the offset of this
-                    // &[u8] was from the original bytes, so that we can call .slice() on it to get a
-                    // cheap reference-counted bytes rather than having to clone it. so we use the
-                    // subslice_offset function which lets us do exactly that.
-                    let value = change.value();
-                    let value = [&left, &right]
-                        .iter()
-                        .find_map(|b| {
-                            subslice_offset(&b[..], value)
-                                .map(|index| b.slice(index..index + value.len()))
-                        })
-                        .unwrap();
-                    (change.tag(), value)
-                })
-                .collect();
+            let mut changes: Vec<(ChangeTag, Bytes)> = vec![];
+            for op in ops {
+                let (tag, old, new) = op.as_tag_tuple();
+                let deleted = old.map(|index| (ChangeTag::Delete, left_lines[index].clone()));
+                let inserted = new.map(|index| (ChangeTag::Insert, right_lines[index].clone()));
+                match tag {
+                    DiffTag::Equal => {
+                        changes.extend(deleted.map(|(_, line)| (ChangeTag::Equal, line)))
+                    }
+                    DiffTag::Delete => changes.extend(deleted),
+                    DiffTag::Insert => changes.extend(inserted),
+                    DiffTag::Replace => changes.extend(deleted.chain(inserted)),
+                }
+            }
 
             let mut offsets = vec![];
             let mut insertions = 0;

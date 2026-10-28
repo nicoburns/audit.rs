@@ -145,3 +145,50 @@ fn routes_parse_and_display() {
         Route::NotFound { .. }
     ));
 }
+
+fn source_with(path: &str, text: &str) -> std::sync::Arc<CrateSource> {
+    let version = VersionInfo {
+        checksum: vec![],
+        dl_path: Default::default(),
+        krate: "test".into(),
+        yanked: false,
+        version: "0.1.0".parse().unwrap(),
+    };
+    std::sync::Arc::new(CrateSource {
+        version,
+        files: [(path.into(), bytes::Bytes::from(text.to_owned()))].into(),
+    })
+}
+
+fn file_changes(old: &str, new: &str) -> Changes {
+    let diff = VersionDiff::new(
+        source_with("src/lib.rs", old),
+        source_with("src/lib.rs", new),
+    );
+    diff.files[camino::Utf8Path::new("src/lib.rs")].summary
+}
+
+#[test]
+fn diff_ignores_line_ending_changes() {
+    assert_eq!(
+        file_changes("a\nb\nc\n", "a\r\nb\r\nc\r\n"),
+        Changes::default()
+    );
+    assert_eq!(file_changes("a\r\nb\r\n", "a\nb\n"), Changes::default());
+}
+
+#[test]
+fn diff_detects_changes_across_line_endings() {
+    assert_eq!(
+        file_changes("a\nb\nc\n", "a\r\nx\r\nc\r\n"),
+        Changes {
+            added: 1,
+            removed: 1
+        }
+    );
+}
+
+#[test]
+fn diff_detects_missing_trailing_newline() {
+    assert_ne!(file_changes("a\nb\n", "a\nb"), Changes::default());
+}

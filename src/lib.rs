@@ -164,6 +164,13 @@ impl From<Utf8PathBuf> for FilePath {
     }
 }
 
+impl FilePath {
+    /// The file path, or `None` if the route has no file path (such as `/serde/1.0.0/1.0.1/`).
+    fn into_file(self) -> Option<Utf8PathBuf> {
+        (!self.0.as_str().is_empty()).then_some(self.0)
+    }
+}
+
 impl From<&str> for FilePath {
     fn from(path: &str) -> Self {
         Self(path.into())
@@ -190,7 +197,7 @@ fn BrowseFile(krate: String, version: VersionId, path: FilePath) -> Element {
             dst_name: krate,
             old: version.clone(),
             new: version,
-            path: path.0,
+            path: path.into_file(),
         }
     }
 }
@@ -239,7 +246,7 @@ fn SingleSourceFile(
             dst_name: krate,
             old: old_version,
             new: new_version,
-            path: path.0,
+            path: path.into_file(),
         }
     }
 }
@@ -258,7 +265,7 @@ fn File(
             dst_name: new_krate,
             old: old_version,
             new: new_version,
-            path: path.0,
+            path: path.into_file(),
         }
     }
 }

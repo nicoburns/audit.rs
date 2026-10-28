@@ -26,11 +26,12 @@ test-data-crates:
 setup:
     rustup target add wasm32-unknown-unknown
     rustup toolchain add nightly
-    cargo install trunk cargo-deny
+    cargo install dioxus-cli --version 0.8.0-alpha.3 --locked
+    cargo install cargo-deny
 
 clean:
     cargo clean
-    trunk clean
+    rm -rf dist
 
 # Format code
 format:
@@ -38,7 +39,7 @@ format:
 
 # Launch local debug server
 serve:
-    trunk serve
+    dx serve --web
 
 # Run checks (same as in CI)
 check:
@@ -46,15 +47,15 @@ check:
     cargo deny check
     cargo clippy -- -D warnings
     cargo test
-    trunk build
+    dx build --web
 
 # generate a build, like we do in CI (including compression)
 build:
-    trunk clean
-    trunk build --release
+    rm -rf dist
+    dx bundle --web --release --out-dir dist
     just compress
 
 # compress assets
 compress:
-    find dist -not -name '*.gz' -not -name '*.br' -type f -exec gzip -vk {} \;
-    find dist -not -name '*.gz' -not -name '*.br' -type f -exec brotli -vk {} \;
+    find dist/public -not -name '*.gz' -not -name '*.br' -type f -exec gzip -vk {} \;
+    find dist/public -not -name '*.gz' -not -name '*.br' -type f -exec brotli -vk {} \;

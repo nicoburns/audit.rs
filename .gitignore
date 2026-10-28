@@ -1,7 +1,7 @@
 # rust build artifacts
 /target
 
-# trunk build artifacts
+# dx bundle artifacts
 /dist
 
 .idea/

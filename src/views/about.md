@@ -33,7 +33,7 @@ This list is not exhaustive, check the repository for a full
 Additionally, this tool builds on work done by the Rust ecosystem. It would
 not be possible without the following crates:
 
-- [Yew](https://crates.io/crates/yew): responsive frontend web framework for Rust,
+- [Dioxus](https://crates.io/crates/dioxus): reactive frontend web framework for Rust,
 - [Syntect](https://crates.io/crates/syntect): syntax highlighter,
 - [Similar](https://crates.io/crates/similar): diff algorithm implementation,
 - [Tar](https://crates.io/crates/tar): reading of Tar archives,

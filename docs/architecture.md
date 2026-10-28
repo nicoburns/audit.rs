@@ -7,10 +7,10 @@ works.
 ## Code Structure
 
 Currently, `diff.rs` is a single-page web application implemented in Rust using
-[Yew][yew]. It is structured like this:
+[Dioxus][dioxus]. It is structured like this:
 
-- `src/main.rs` is the binary entrypoint. It sets up logging and the Yew
-  rendering.
+- `src/main.rs` is the binary entrypoint. It sets up logging and launches the
+  Dioxus application.
 - `src/lib.rs` is the library entrypoint. It defines the routing and re-exports
   definitions. The router will map every route to a view.
 - `src/views/` contains views, these are the root components for entire pages.
@@ -25,9 +25,12 @@ Currently, `diff.rs` is a single-page web application implemented in Rust using
   [syntect](https://docs.rs/syntect).
 - `src/version.rs` contains the `VersionId` type, which can represent an exact
   version, a version requirement, or a named version such as `latest`.
-- `src/tailwind.css` contains styles for the components and views.
-- `index.html` contains the skeleton and metadata for Trunk for which assets to
-  build and bundle.
+- `tailwind.css` contains styles for the components and views. The Dioxus CLI
+  compiles it into `assets/tailwind.css`, which the app includes using the
+  `asset!()` macro.
+- `index.html` contains the skeleton and metadata of the page, the Dioxus CLI
+  injects the application into it.
+- `Dioxus.toml` contains the configuration for the Dioxus CLI.
 
 See also [Contributing](contributing.md) for more information on the structure.
 
@@ -79,4 +82,4 @@ file that Cargo embeds in every published crate. The repository tarball is
 then downloaded from GitHub or GitLab. Because those hosts do not send
 permissive CORS headers, the request is routed through `corsproxy.io`.
 
-[yew]: https://yew.rs
+[dioxus]: https://dioxuslabs.com

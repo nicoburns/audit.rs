@@ -1,36 +1,35 @@
 use crate::{components::*, Route};
-use yew::prelude::*;
-use yew_router::prelude::*;
+use dioxus::prelude::*;
 
-#[function_component]
-fn Logo() -> Html {
-    html! {
-        <h1 class="text-center text-3xl font-bold my-12 dark:text-white">{ "diff.rs" }</h1>
+#[component]
+fn Logo() -> Element {
+    rsx! {
+        h1 { class: "text-center text-3xl font-bold my-12 dark:text-white", "diff.rs" }
     }
 }
 
 /// Home page, shows search bar.
-#[function_component]
-pub fn Home() -> Html {
-    let navigator = use_navigator().unwrap();
+#[component]
+pub fn Home() -> Element {
+    let navigator = use_navigator();
     let onchange = move |input: String| {
         if !input.is_empty() {
-            navigator.push(&Route::Search { query: input });
+            navigator.push(Route::Search { query: input });
         }
     };
-    html! {
-        <div class="flex flex-col min-h-screen">
-            <div class="flex-1">
-                <SimpleNavbar />
-                <Content>
-                    <Logo />
-                    <div class="max-w-3xl m-auto">
-                        <SearchBar value={""} {onchange} />
-                    </div>
-                    <DefaultSummarySection />
-                </Content>
-            </div>
-            <Footer />
-        </div>
+    rsx! {
+        div { class: "flex flex-col min-h-screen",
+            div { class: "flex-1",
+                SimpleNavbar {}
+                Content {
+                    Logo {}
+                    div { class: "max-w-3xl m-auto",
+                        SearchBar { value: "", onchange }
+                    }
+                    DefaultSummarySection {}
+                }
+            }
+            Footer {}
+        }
     }
 }

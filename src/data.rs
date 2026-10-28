@@ -2,9 +2,9 @@ use crate::version::{VersionId, VersionNamed};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use dioxus::logger::tracing::{debug, info};
 use flate2::bufread::GzDecoder;
 use gloo_net::http::Request;
-use log::*;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -16,9 +16,16 @@ use std::{
     rc::Rc,
     sync::Arc,
 };
-use subslice_offset::SubsliceOffset;
 use tar::Archive;
 use url::Url;
+
+/// Returns the offset of `inner` within `outer`, if `inner` is a subslice of `outer`.
+pub(crate) fn subslice_offset(outer: &[u8], inner: &[u8]) -> Option<usize> {
+    let outer = outer.as_ptr_range();
+    let inner = inner.as_ptr_range();
+    (outer.start <= inner.start && inner.end <= outer.end)
+        .then(|| inner.start as usize - outer.start as usize)
+}
 
 /// Crates.io response type for crate search
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -448,13 +455,12 @@ impl VersionDiff {
                     // change gives us a &[u8]. now, we want to figure out what the offset of this
                     // &[u8] was from the original bytes, so that we can call .slice() on it to get a
                     // cheap reference-counted bytes rather than having to clone it. so we use the
-                    // subslice_offset crate which lets us do exactly that.
+                    // subslice_offset function which lets us do exactly that.
                     let value = change.value();
                     let value = [&left, &right]
                         .iter()
                         .find_map(|b| {
-                            b[..]
-                                .subslice_offset(value)
+                            subslice_offset(&b[..], value)
                                 .map(|index| b.slice(index..index + value.len()))
                         })
                         .unwrap();

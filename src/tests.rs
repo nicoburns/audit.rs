@@ -59,3 +59,89 @@ fn can_parse_crate_source_log_0_4_17() {
     let version = log.version("0.4.17".parse().unwrap()).unwrap();
     let _ = parse_canned_source(version).unwrap();
 }
+
+#[test]
+fn subslice_offset_finds_subslices() {
+    let data = b"hello world";
+    assert_eq!(subslice_offset(data, &data[6..]), Some(6));
+    assert_eq!(subslice_offset(data, &data[..5]), Some(0));
+    assert_eq!(subslice_offset(&data[6..], &data[..5]), None);
+    assert_eq!(subslice_offset(data, b"world"), None);
+}
+
+#[test]
+fn routes_parse_and_display() {
+    use crate::{version::VersionId, Route};
+    use std::str::FromStr;
+
+    let version = |v: &str| VersionId::from_str(v).unwrap();
+    let cases = [
+        ("/", Route::Home {}),
+        ("/about", Route::About {}),
+        (
+            "/serde",
+            Route::Crate {
+                krate: "serde".into(),
+            },
+        ),
+        (
+            "/search/serde",
+            Route::Search {
+                query: "serde".into(),
+            },
+        ),
+        (
+            "/serde/1.0.0/1.0.1",
+            Route::SingleSourceDiff {
+                krate: "serde".into(),
+                old_version: version("1.0.0"),
+                new_version: version("1.0.1"),
+            },
+        ),
+        (
+            "/serde/1.0.0/1.0.1/src/de/mod.rs",
+            Route::SingleSourceFile {
+                krate: "serde".into(),
+                old_version: version("1.0.0"),
+                new_version: version("1.0.1"),
+                path: "src/de/mod.rs".into(),
+            },
+        ),
+        (
+            "/log/0.4.17/tracing/0.1.0/Cargo.toml",
+            Route::File {
+                old_krate: "log".into(),
+                old_version: version("0.4.17"),
+                new_krate: "tracing".into(),
+                new_version: version("0.1.0"),
+                path: "Cargo.toml".into(),
+            },
+        ),
+        (
+            "/browse/serde/latest/src/lib.rs",
+            Route::BrowseFile {
+                krate: "serde".into(),
+                version: version("latest"),
+                path: "src/lib.rs".into(),
+            },
+        ),
+        (
+            "/repo/serde/1.0.0/files/src/lib.rs",
+            Route::RepoFile {
+                krate: "serde".into(),
+                version: version("1.0.0"),
+                path: "src/lib.rs".into(),
+            },
+        ),
+    ];
+
+    for (url, route) in cases {
+        assert_eq!(Route::from_str(url).unwrap(), route, "parsing {url}");
+        assert_eq!(route.to_string(), url, "displaying {route:?}");
+    }
+
+    assert!(matches!(
+        Route::from_str("/a/b/c/d/e/f/g").unwrap(),
+        Route::NotFound { .. }
+    ));
+}

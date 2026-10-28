@@ -46,10 +46,7 @@ compress the files in the same way as in CI:
 
 ```bash
 $ just build
-$ ls -lah dist/*.wasm*
--rw-r--r-- 1 user user 3.4M Oct 20 12:12 dist/diff-rs-60a0fb1e19269ab7_bg.wasm
--rw-r--r-- 1 user user 1.1M Oct 20 12:12 dist/diff-rs-60a0fb1e19269ab7_bg.wasm.br
--rw-r--r-- 1 user user 1.5M Oct 20 12:12 dist/diff-rs-60a0fb1e19269ab7_bg.wasm.gz
+$ ls -lah dist/public/wasm/*.wasm*
 ```
 
 Our aim is to keep the compressed assets (specifically the brotli) one around
@@ -60,8 +57,8 @@ useful functionality might be worth it even if it results in larger sizes.
 
 For styling, `diff.rs` uses [Tailwind CSS][tailwind]. This exports CSS utility
 classes that can be used to add styling to HTML documents. The Tailwind CSS
-generator is automatically run by [Trunk][trunk], the build tool `diff.rs`
-uses.
+generator is automatically run by the [Dioxus CLI][dx], the build tool
+`diff.rs` uses.
 
 For prototyping, these classes are typically directly added to HTML elements,
 like this:
@@ -75,7 +72,7 @@ like this:
 ```
 
 Once the result looks good, custom CSS classes should be created in the
-`src/tailwind.css` file. Doing this allows separating the styling from
+`tailwind.css` file. Doing this allows separating the styling from
 the content, and allows for adding useful comments for the styling.
 
 For example, this would involve replacing the Tailwind utility classes
@@ -190,5 +187,5 @@ The only advice is to:
 [docs.rs]: https://docs.rs/
 [git-linear]: https://www.bitsnbites.eu/a-tidy-linear-git-history/
 [tailwind]: https://tailwindcss.com/docs/
-[trunk]: https://trunkrs.dev/
+[dx]: https://dioxuslabs.com
 [lto]: https://nnethercote.github.io/perf-book/build-configuration.html#link-time-optimization

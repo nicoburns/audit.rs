@@ -1,216 +1,185 @@
 use crate::{components::Search, data::CrateResponse, *};
-use implicit_clone::unsync::IString;
-use indexmap::IndexMap;
 use semver::Version;
 use std::sync::Arc;
-use web_sys::HtmlSelectElement;
-use yew::prelude::*;
 
-#[function_component]
-fn FileDiffIcon() -> Html {
+#[component]
+fn FileDiffIcon() -> Element {
     // from https://lucide.dev/icons/file-diff
-    html! {
-        <svg xmlns="http://www.w3.org/2000/svg" height="1.5ex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-            <path d="M9 10h6" />
-            <path d="M12 13V7" />
-            <path d="M9 17h6" />
-        </svg>
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            height: "1.5ex",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" }
+            path { d: "M9 10h6" }
+            path { d: "M12 13V7" }
+            path { d: "M9 17h6" }
+        }
     }
 }
 
-#[function_component]
-fn BoxIcon() -> Html {
+#[component]
+fn BoxIcon() -> Element {
     // from https://lucide.dev/icons/box
-    html! {
-        <svg xmlns="http://www.w3.org/2000/svg" height="1.5ex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-            <path d="m3.3 7 8.7 5 8.7-5" />
-            <path d="M12 22V12" />
-        </svg>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct NavbarProps {
-    pub children: Children,
-}
-
-#[function_component]
-pub fn Navbar(props: &NavbarProps) -> Html {
-    html! {
-        <nav id="navbar" class="" aria-label="Main">
-            <div class="navbar-items">
-                { for props.children.iter() }
-            </div>
-        </nav>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct NavbarGroupProps {
-    pub children: Children,
-}
-
-#[function_component]
-pub fn NavbarGroup(props: &NavbarGroupProps) -> Html {
-    html! {
-        <div class="navbar-group">
-            { for props.children.iter() }
-        </div>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct NavbarHeadingProps {
-    pub children: Children,
-}
-
-#[function_component]
-pub fn NavbarHeading(props: &NavbarHeadingProps) -> Html {
-    html! {
-        <div class="text-xl font-bold text-nowrap flex flex-row items-center">
-        { for props.children.iter() }
-        </div>
-    }
-}
-
-#[function_component]
-pub fn NavbarItem(props: &NavbarHeadingProps) -> Html {
-    html! {
-        <div class="text-lg text-nowrapf flex flex-row items-center">
-        { for props.children.iter() }
-        </div>
-    }
-}
-
-#[function_component]
-pub fn SimpleNavbar() -> Html {
-    html! {
-        <Navbar>
-            <NavbarGroup>
-                <NavbarHeading>
-                    <Link to={Route::Home} classes="flex flex-row items-center">
-                        <FileDiffIcon />
-                        { "diff.rs" }
-                    </Link>
-                </NavbarHeading>
-                <NavbarItem>
-                    <Link to={Route::About}>
-                        {"About"}
-                    </Link>
-                </NavbarItem>
-            </NavbarGroup>
-        </Navbar>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct SelectProps {
-    #[prop_or_default]
-    values: IndexMap<IString, IString>,
-    #[prop_or_default]
-    selected: Option<IString>,
-    #[prop_or_default]
-    onchange: Callback<IString>,
-}
-
-#[function_component]
-pub fn Select(props: &SelectProps) -> Html {
-    let onchange = {
-        let onchange = props.onchange.clone();
-        move |event: Event| {
-            let target = event.target_dyn_into::<HtmlSelectElement>().unwrap();
-            let value = target.value();
-            onchange.emit(value.into());
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            height: "1.5ex",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" }
+            path { d: "m3.3 7 8.7 5 8.7-5" }
+            path { d: "M12 22V12" }
         }
-    };
-    html! {
-        <select class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" {onchange}>
-        {
-            for props
-                .values
-                .iter()
-                .map(|(key, value)| {
-                    let selected = props
-                        .selected
-                        .as_ref()
-                        .map(|k| k == key)
-                        .unwrap_or(false);
-                    html! {
-                        <option {selected} value={key}>{value}</option>
+    }
+}
+
+#[component]
+pub fn Navbar(children: Element) -> Element {
+    rsx! {
+        nav { id: "navbar", class: "", aria_label: "Main",
+            div { class: "navbar-items", {children} }
+        }
+    }
+}
+
+#[component]
+pub fn NavbarGroup(children: Element) -> Element {
+    rsx! {
+        div { class: "navbar-group", {children} }
+    }
+}
+
+#[component]
+pub fn NavbarHeading(children: Element) -> Element {
+    rsx! {
+        div { class: "text-xl font-bold text-nowrap flex flex-row items-center", {children} }
+    }
+}
+
+#[component]
+pub fn NavbarItem(children: Element) -> Element {
+    rsx! {
+        div { class: "text-lg text-nowrapf flex flex-row items-center", {children} }
+    }
+}
+
+#[component]
+pub fn SimpleNavbar() -> Element {
+    rsx! {
+        Navbar {
+            NavbarGroup {
+                NavbarHeading {
+                    Link { to: Route::Home {}, class: "flex flex-row items-center",
+                        FileDiffIcon {}
+                        "diff.rs"
                     }
-                })
+                }
+                NavbarItem {
+                    Link { to: Route::About {}, "About" }
+                }
+            }
         }
-        </select>
     }
 }
 
-#[derive(Properties, PartialEq)]
-pub struct ComplexNavbarProps {
-    pub src_name: String,
-    pub dst_name: String,
-    pub old: Version,
-    pub new: Version,
-    pub src_info: Arc<CrateResponse>,
-    pub dst_info: Arc<CrateResponse>,
-    #[prop_or_default]
-    pub onchange: Callback<((String, Version), (String, Version))>,
-}
-
-#[function_component]
-fn SwitchIcon() -> Html {
-    html! {
-        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="currentColor" d="M7.72 21.78a.75.75 0 0 0 1.06-1.06L5.56 17.5h14.69a.75.75 0 0 0 0-1.5H5.56l3.22-3.22a.75.75 0 1 0-1.06-1.06l-4.5 4.5a.75.75 0 0 0 0 1.06l4.5 4.5Zm8.56-9.5a.75.75 0 1 1-1.06-1.06L18.44 8H3.75a.75.75 0 0 1 0-1.5h14.69l-3.22-3.22a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5Z">
-            </path>
-        </svg>
+/// Dropdown, `values` is a list of `(value, label)` pairs.
+#[component]
+pub fn Select(
+    #[props(default)] values: Vec<(String, String)>,
+    #[props(default)] selected: Option<String>,
+    onchange: Option<EventHandler<String>>,
+) -> Element {
+    rsx! {
+        select {
+            class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+            onchange: move |event: FormEvent| {
+                if let Some(onchange) = onchange {
+                    onchange.call(event.value());
+                }
+            },
+            for (key, value) in values.iter() {
+                option {
+                    key: "{key}",
+                    selected: selected.as_ref() == Some(key),
+                    value: "{key}",
+                    "{value}"
+                }
+            }
+        }
     }
 }
 
-#[function_component]
-pub fn ComplexNavbar(props: &ComplexNavbarProps) -> Html {
+#[component]
+fn SwitchIcon() -> Element {
+    rsx! {
+        svg {
+            class: "h-4 w-4",
+            xmlns: "http://www.w3.org/2000/svg",
+            view_box: "0 0 24 24",
+            width: "24",
+            height: "24",
+            path {
+                fill: "currentColor",
+                d: "M7.72 21.78a.75.75 0 0 0 1.06-1.06L5.56 17.5h14.69a.75.75 0 0 0 0-1.5H5.56l3.22-3.22a.75.75 0 1 0-1.06-1.06l-4.5 4.5a.75.75 0 0 0 0 1.06l4.5 4.5Zm8.56-9.5a.75.75 0 1 1-1.06-1.06L18.44 8H3.75a.75.75 0 0 1 0-1.5h14.69l-3.22-3.22a.75.75 0 0 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5Z",
+            }
+        }
+    }
+}
+
+/// Crate versions selected in the [`ComplexNavbar`], as `((src_name, old), (dst_name, new))`.
+pub type VersionSelection = ((String, Version), (String, Version));
+
+#[component]
+pub fn ComplexNavbar(
+    src_name: String,
+    dst_name: String,
+    old: Version,
+    new: Version,
+    src_info: Arc<CrateResponse>,
+    dst_info: Arc<CrateResponse>,
+    onchange: Option<EventHandler<VersionSelection>>,
+) -> Element {
     let prepare_versions = |versions: &[crate::data::VersionInfo]| {
         versions
             .iter()
             .map(|version| {
-                let num = IString::from(version.version.to_string());
+                let num = version.version.to_string();
                 if version.yanked {
-                    (num.clone(), format!("{num} (yanked)").into())
+                    (num.clone(), format!("{num} (yanked)"))
                 } else {
-                    (num.clone(), num.clone())
+                    (num.clone(), num)
                 }
             })
-            .collect()
+            .collect::<Vec<_>>()
     };
-    let switched = use_state(|| false);
+    let mut switched_for = use_signal(|| None::<VersionSelection>);
+    let selection = (
+        (src_name.clone(), old.clone()),
+        (dst_name.clone(), new.clone()),
+    );
+    let switched = switched_for.read().as_ref() == Some(&selection);
 
-    let (src_name, dst_name, old, new, src_info, dst_info) = if *switched {
-        (
-            &props.dst_name,
-            &props.src_name,
-            &props.new,
-            &props.old,
-            &props.dst_info,
-            &props.src_info,
-        )
+    let (src_name, dst_name, old, new, src_info, dst_info) = if switched {
+        (dst_name, src_name, new, old, dst_info, src_info)
     } else {
-        (
-            &props.src_name,
-            &props.dst_name,
-            &props.old,
-            &props.new,
-            &props.src_info,
-            &props.dst_info,
-        )
+        (src_name, dst_name, old, new, src_info, dst_info)
     };
 
-    let src_versions: IndexMap<IString, IString> = prepare_versions(&src_info.versions);
-    let dst_versions: IndexMap<IString, IString> = prepare_versions(&dst_info.versions);
+    let src_versions = prepare_versions(&src_info.versions);
+    let dst_versions = prepare_versions(&dst_info.versions);
 
     let switch = {
-        let onchange = props.onchange.clone();
-        let new_switched = !*switched;
+        let new_switched = !switched;
         let versions = if new_switched {
             (
                 (dst_name.clone(), new.clone()),
@@ -222,78 +191,90 @@ pub fn ComplexNavbar(props: &ComplexNavbarProps) -> Html {
                 (dst_name.clone(), new.clone()),
             )
         };
-        Callback::from(move |_| {
-            switched.set(new_switched);
-            onchange.emit(versions.clone());
-        })
+        move |_| {
+            switched_for.set(new_switched.then(|| selection.clone()));
+            if let Some(onchange) = onchange {
+                onchange.call(versions.clone());
+            }
+        }
     };
 
-    html! {
-        <Navbar>
-            <NavbarHeading>
-                <Link to={Route::Home} classes="flex flex-row items-center">
-                    <FileDiffIcon />
-                    <span>{ "diff.rs" }</span>
-                </Link>
-            </NavbarHeading>
-            <div class="navbar-group lg:order-last grow min-w-[370px]">
-                <Search />
-            </div>
-            <div class="navbar-group grow">
-                <div class="navbar-group flex-nowrap">
-                    <NavbarItem>
-                        <a href={format!("https://crates.io/crates/{src_name}")} class="flex flex-row items-center">
-                            <BoxIcon />
-                        </a>
-                        { src_name.clone() }
-                    </NavbarItem>
-                    <NavbarItem>
-                        <Select
-                            values={src_versions.clone()}
-                            selected={Some(old.to_string().into()) as Option<IString>}
-                            onchange={
-                                let onchange = props.onchange.clone();
-                                let src_name = src_name.clone();
-                                let dst_name = dst_name.clone();
-                                let new = new.clone();
-                                move |old: IString| {
-                                    let old: Version = old.parse().unwrap();
-                                    onchange.emit(((src_name.clone(), old.clone()), (dst_name.clone(), new.clone())))
-                                }
-                            }
-                        />
-                    </NavbarItem>
-                </div>
-                <NavbarItem>
-                    <span class="cursor-pointer hover:rotate-180 transition delay-150 duration-300 ease-in-out" onclick={switch}>
-                        <SwitchIcon />
-                    </span>
-                </NavbarItem>
-                <div class="navbar-group flex-nowrap">
-                <NavbarItem>
-                    <a href={format!("https://crates.io/crates/{dst_name}")} class="flex flex-row items-center">
-                        <BoxIcon />
-                    </a>
-                    { dst_name.clone() }
-                </NavbarItem>
-                <NavbarItem>
-                    <Select
-                        values={dst_versions}
-                        selected={Some(new.to_string().into()) as Option<IString>}
-                        onchange={
-                            let onchange = props.onchange.clone();
-                            let src_name = src_name.clone();
-                            let dst_name = dst_name.clone();
-                            let old = old.clone();
-                            move |new: IString| {
-                                let new: Version = new.parse().unwrap();
-                                onchange.emit(((src_name.clone(), old.clone()), (dst_name.clone(), new.clone())))
-                            }
+    let on_old_change = {
+        let src_name = src_name.clone();
+        let dst_name = dst_name.clone();
+        let new = new.clone();
+        move |old: String| {
+            let old: Version = old.parse().unwrap();
+            if let Some(onchange) = onchange {
+                onchange.call(((src_name.clone(), old), (dst_name.clone(), new.clone())));
+            }
+        }
+    };
+
+    let on_new_change = {
+        let src_name = src_name.clone();
+        let dst_name = dst_name.clone();
+        let old = old.clone();
+        move |new: String| {
+            let new: Version = new.parse().unwrap();
+            if let Some(onchange) = onchange {
+                onchange.call(((src_name.clone(), old.clone()), (dst_name.clone(), new)));
+            }
+        }
+    };
+
+    rsx! {
+        Navbar {
+            NavbarHeading {
+                Link { to: Route::Home {}, class: "flex flex-row items-center",
+                    FileDiffIcon {}
+                    span { "diff.rs" }
+                }
+            }
+            div { class: "navbar-group lg:order-last grow min-w-[370px]", Search {} }
+            div { class: "navbar-group grow",
+                div { class: "navbar-group flex-nowrap",
+                    NavbarItem {
+                        a {
+                            href: "https://crates.io/crates/{src_name}",
+                            class: "flex flex-row items-center",
+                            BoxIcon {}
                         }
-                    />
-                </NavbarItem>
-                </div>
-            </div>
-        </Navbar>
+                        "{src_name}"
+                    }
+                    NavbarItem {
+                        Select {
+                            values: src_versions,
+                            selected: old.to_string(),
+                            onchange: on_old_change,
+                        }
+                    }
+                }
+                NavbarItem {
+                    span {
+                        class: "cursor-pointer hover:rotate-180 transition delay-150 duration-300 ease-in-out",
+                        onclick: switch,
+                        SwitchIcon {}
+                    }
+                }
+                div { class: "navbar-group flex-nowrap",
+                    NavbarItem {
+                        a {
+                            href: "https://crates.io/crates/{dst_name}",
+                            class: "flex flex-row items-center",
+                            BoxIcon {}
+                        }
+                        "{dst_name}"
+                    }
+                    NavbarItem {
+                        Select {
+                            values: dst_versions,
+                            selected: new.to_string(),
+                            onchange: on_new_change,
+                        }
+                    }
+                }
+            }
+        }
     }
 }

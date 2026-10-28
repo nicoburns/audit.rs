@@ -1,6 +1,6 @@
 use crate::data::*;
 use anyhow::Result;
-use log::*;
+use dioxus::logger::tracing::info;
 use semver::Version;
 use std::{
     collections::BTreeMap,

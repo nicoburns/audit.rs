@@ -1,5 +1,5 @@
+use crate::data::subslice_offset;
 use similar::ChangeTag;
-use subslice_offset::SubsliceOffset;
 use syntect::{
     easy::HighlightLines,
     highlighting::{Color, FontStyle, Style, Theme, ThemeSet},
@@ -51,7 +51,7 @@ fn highlight_bytes_line(
         styles
             .into_iter()
             .map(|(style, chunk)| {
-                let start = line[..].subslice_offset(chunk).unwrap();
+                let start = subslice_offset(line.as_bytes(), chunk.as_bytes()).unwrap();
                 (style, bytes.slice(start..start + chunk.len()))
             })
             .collect::<Vec<_>>(),

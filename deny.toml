@@ -5,9 +5,7 @@ targets = ["wasm32-unknown-unknown"]
 feature-depth = 1
 
 [advisories]
-ignore = [
-    { id = "RUSTSEC-2024-0370", reason = "implicit dependency of yew" },
-]
+ignore = []
 
 [licenses]
 # generally, we want to stick to these licenses.
@@ -19,7 +17,6 @@ confidence-threshold = 0.8
 # exceptions are okay, as long as they are open-source compatible
 exceptions = [
     { allow = ["Unicode-DFS-2016"], crate = "unicode-ident" },
-    { allow = ["WTFPL"], crate = "subslice-offset" },
 ]
 
 [licenses.private]
@@ -31,7 +28,7 @@ wildcards = "deny"
 highlight = "simplest-path"
 # skip multiple version checks for these crates. feel free to add more here,
 # the point of this list is so that we are aware of which dependency
-# duplications we have. since yew depends on some outdated versions, we can't
+# duplications we have. since dioxus depends on some outdated versions, we can't
 # avoid some of them.
 skip = [
     { crate = "syn", reason = "transitive dependency" },

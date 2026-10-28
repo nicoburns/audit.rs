@@ -11,29 +11,22 @@ anyhow = "1.0.69"
 bytes = "1.4.0"
 camino = "1.1.9"
 comrak = "0.52.0"
+dioxus = { version = "=0.8.0-alpha.3", features = ["web", "router"] }
 flate2 = "1.0.25"
 gloo-net = "0.7.0"
+gloo-timers = { version = "0.3.0", features = ["futures"] }
 hex = { version = "0.4.3", features = ["serde"] }
-implicit-clone = "0.6.0"
-indexmap = "2.2.6"
 lazy_static = "1.5.0"
-log = "0.4.17"
 semver = { version = "1.0.22", features = ["serde"] }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.132"
 sha2 = "0.11.0"
 similar = { version = "3.1.0", features = ["text", "bytes"] }
 strum = { version = "0.28.0", features = ["derive"] }
-subslice-offset = "0.1.1"
 syntect = { version = "5.2.0", default-features = false, features = ["parsing", "default-syntaxes", "default-themes", "regex-fancy"] }
 tar = "0.4.38"
 thiserror = "2.0.18"
 url = { version = "2.3.1", features = ["serde"] }
-wasm-logger = "0.2.0"
-web-sys = { version = "0.3.61", features = ["HtmlInputElement", "HtmlSelectElement"] }
-yew = { version = "0.23.0", features = ["csr"] }
-yew-hooks = "0.6.4"
-yew-router = "0.20.0"
 
 # enable LTO and use a single codegen-unit to get smaller and more efficient code.
 [profile.release]

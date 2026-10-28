@@ -12,4 +12,11 @@ mod not_found;
 mod repo;
 mod search;
 
-pub use self::{about::*, diff::*, home::Home, not_found::NotFound, repo::*, search::Search};
+pub use self::{
+    about::About,
+    diff::{Diff, SourceView},
+    home::Home,
+    not_found::NotFound,
+    repo::RepoFileView,
+    search::Search,
+};

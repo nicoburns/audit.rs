@@ -1,18 +1,17 @@
 /// Initialize logging.
 fn init_logging() {
-    use log::Level;
-    use wasm_logger::Config;
+    use dioxus::logger::tracing::Level;
 
     // use debug level for debug builds, warn level for production builds.
     #[cfg(debug_assertions)]
-    let level = Level::Debug;
+    let level = Level::DEBUG;
     #[cfg(not(debug_assertions))]
-    let level = Level::Warn;
+    let level = Level::WARN;
 
-    wasm_logger::init(Config::new(level));
+    dioxus::logger::init(level).expect("failed to initialize logger");
 }
 
 fn main() {
     init_logging();
-    yew::Renderer::<diff_rs::App>::new().render();
+    dioxus::launch(diff_rs::App);
 }

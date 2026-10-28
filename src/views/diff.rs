@@ -1,75 +1,73 @@
 use crate::{cache::*, components::*, data::*, version::VersionId, Route};
 use camino::Utf8PathBuf;
-use semver::Version;
-use std::sync::Arc;
-use yew::{prelude::*, suspense::*};
-use yew_router::prelude::*;
-
-/// Props for which file to show.
-#[derive(Properties, PartialEq, Clone)]
-pub struct DiffProps {
-    pub src_name: String,
-    pub dst_name: String,
-    pub old: VersionId,
-    pub new: VersionId,
-    #[prop_or_default]
-    pub path: Option<Utf8PathBuf>,
-}
+use dioxus::prelude::*;
+use std::{rc::Rc, sync::Arc};
 
 /// Show diff of a file change between two crate versions.
-#[function_component]
-pub fn Diff(props: &DiffProps) -> Html {
-    let fallback = html! {
-        <>
-            <SimpleNavbar />
-            <Content>
-                <Center>
-                    <Loading title={"Loading crate"} status={"Loading crate metadata"} />
-                </Center>
-            </Content>
-        </>
-    };
-    html! {
-        <Suspense {fallback}>
-            <CrateFetcher
-                src_name={props.src_name.clone()}
-                dst_name={props.dst_name.clone()}
-                old={props.old.clone()}
-                new={props.new.clone()}
-                path={props.path.clone()}
-            />
-        </Suspense>
+#[component]
+pub fn Diff(
+    src_name: String,
+    dst_name: String,
+    old: VersionId,
+    new: VersionId,
+    path: Option<Utf8PathBuf>,
+) -> Element {
+    rsx! {
+        SuspenseBoundary {
+            fallback: |_| rsx! {
+                SimpleNavbar {}
+                Content {
+                    Center {
+                        Loading { title: "Loading crate", status: "Loading crate metadata" }
+                    }
+                }
+            },
+            CrateFetcher {
+                src_name,
+                dst_name,
+                old,
+                new,
+                path,
+            }
+        }
     }
 }
 
-#[function_component]
-fn CrateFetcher(props: &DiffProps) -> HtmlResult {
-    let info = use_future_with(
-        (props.src_name.clone(), props.dst_name.clone()),
-        |names| async move {
-            (
-                CRATE_RESPONSE_CACHE.fetch_cached(&names.0).await,
-                CRATE_RESPONSE_CACHE.fetch_cached(&names.1).await,
-            )
-        },
-    )?;
+#[component]
+fn CrateFetcher(
+    src_name: String,
+    dst_name: String,
+    old: VersionId,
+    new: VersionId,
+    path: Option<Utf8PathBuf>,
+) -> Element {
+    let info = use_resource(use_reactive!(|src_name, dst_name| async move {
+        (
+            CRATE_RESPONSE_CACHE.fetch_cached(&src_name).await,
+            CRATE_RESPONSE_CACHE.fetch_cached(&dst_name).await,
+        )
+    }))
+    .suspend()?;
 
-    let errors = match &*info {
+    let errors = match &*info.read() {
         (Ok(src_info), Ok(dst_info)) => {
-            return Ok(html! {
-                <VersionResolver
-                    {src_info}
-                    {dst_info}
-                    old={props.old.clone()}
-                    new={props.new.clone()}
-                    path={props.path.clone()}
-                />
-            })
+            return rsx! {
+                VersionResolver {
+                    src_info: src_info.clone(),
+                    dst_info: dst_info.clone(),
+                    old,
+                    new,
+                    path,
+                }
+            }
         }
-        (Err(error), Ok(_)) => vec![(&props.src_name, error)],
-        (Ok(_), Err(error)) => vec![(&props.dst_name, error)],
+        (Err(error), Ok(_)) => vec![(&src_name, error.to_string())],
+        (Ok(_), Err(error)) => vec![(&dst_name, error.to_string())],
         (Err(src_error), Err(dst_error)) => {
-            vec![(&props.src_name, src_error), (&props.dst_name, dst_error)]
+            vec![
+                (&src_name, src_error.to_string()),
+                (&dst_name, dst_error.to_string()),
+            ]
         }
     };
     let errors = errors
@@ -77,233 +75,236 @@ fn CrateFetcher(props: &DiffProps) -> HtmlResult {
         .map(|(name, error)| format!("{name} with {error}"))
         .collect::<Vec<_>>()
         .join(" and ");
-    Ok(html! {
-        <>
-            <SimpleNavbar />
-            <Content>
-                <Center>
-                    <Error title={"Loading crate"} status={format!("Error: {errors}")} />
-                </Center>
-            </Content>
-        </>
-    })
+    rsx! {
+        SimpleNavbar {}
+        Content {
+            Center {
+                Error { title: "Loading crate", status: "Error: {errors}" }
+            }
+        }
+    }
 }
 
-#[derive(Properties, PartialEq, Clone)]
-struct VersionResolverProps {
+#[component]
+fn VersionResolver(
     src_info: Arc<CrateResponse>,
     dst_info: Arc<CrateResponse>,
     old: VersionId,
     new: VersionId,
     path: Option<Utf8PathBuf>,
-}
-
-#[function_component]
-fn VersionResolver(props: &VersionResolverProps) -> Html {
+) -> Element {
     // find krate version info
-    let old = props.src_info.version(props.old.clone());
-    let new = props.dst_info.version(props.new.clone());
-    let errors = match (old, new) {
-        (Some(old), Some(new)) => {
-            return html! {
-                <SourceFetcher
-                    src_info={props.src_info.clone()}
-                    dst_info={props.dst_info.clone()}
-                    old={old.clone()}
-                    new={new.clone()}
-                    path={props.path.clone()}
-                />
+    let old_info = src_info.version(old.clone());
+    let new_info = dst_info.version(new.clone());
+    let errors = match (old_info, new_info) {
+        (Some(old_info), Some(new_info)) => {
+            return rsx! {
+                SourceFetcher {
+                    src_info: src_info.clone(),
+                    dst_info: dst_info.clone(),
+                    old: old_info.clone(),
+                    new: new_info.clone(),
+                    path,
+                }
             }
         }
         // get invalid versions from props
-        (None, Some(_)) => vec![(&props.src_info, &props.old)],
-        (Some(_), None) => vec![(&props.dst_info, &props.new)],
-        (None, None) => vec![(&props.src_info, &props.old), (&props.dst_info, &props.new)],
+        (None, Some(_)) => vec![(&src_info, &old)],
+        (Some(_), None) => vec![(&dst_info, &new)],
+        (None, None) => vec![(&src_info, &old), (&dst_info, &new)],
     };
     let errors = errors
         .iter()
         .map(|(info, version)| format!("Error: version {version} of {} not found", info.krate.id))
         .collect::<Vec<_>>()
         .join(" and ");
-    html! {
-        <>
-            <SimpleNavbar />
-                <Content>
-                    <Center>
-                    <Error title={"Resolving version"} status={errors} />
-                </Center>
-            </Content>
-        </>
+    rsx! {
+        SimpleNavbar {}
+        Content {
+            Center {
+                Error { title: "Resolving version", status: errors }
+            }
+        }
     }
 }
 
-#[derive(Properties, PartialEq, Clone)]
-struct SourceFetcherProps {
+#[component]
+fn SourceFetcher(
     src_info: Arc<CrateResponse>,
     dst_info: Arc<CrateResponse>,
     old: VersionInfo,
     new: VersionInfo,
     path: Option<Utf8PathBuf>,
-}
-
-#[function_component]
-fn SourceFetcher(props: &SourceFetcherProps) -> Html {
-    let fallback = html! {
-        <>
-            <ComplexNavbar
-                src_name={props.src_info.krate.id.clone()}
-                dst_name={props.dst_info.krate.id.clone()}
-                old={props.old.version.clone()}
-                new={props.new.version.clone()}
-                src_info={props.src_info.clone()}
-                dst_info={props.dst_info.clone()}
-            />
-            <Center>
-                <Loading title={"Loading crate"} status={"Loading crate source"} />
-            </Center>
-        </>
+) -> Element {
+    let fallback = {
+        let src_info = src_info.clone();
+        let dst_info = dst_info.clone();
+        let old = old.version.clone();
+        let new = new.version.clone();
+        move |_| {
+            rsx! {
+                ComplexNavbar {
+                    src_name: src_info.krate.id.clone(),
+                    dst_name: dst_info.krate.id.clone(),
+                    old: old.clone(),
+                    new: new.clone(),
+                    src_info: src_info.clone(),
+                    dst_info: dst_info.clone(),
+                }
+                Center {
+                    Loading { title: "Loading crate", status: "Loading crate source" }
+                }
+            }
+        }
     };
-    html! {
-        <Suspense {fallback}>
-            <SourceFetcherInner
-                src_info={props.src_info.clone()}
-                dst_info={props.dst_info.clone()}
-                old={props.old.clone()}
-                new={props.new.clone()}
-                path={props.path.clone()}
-            />
-        </Suspense>
+    rsx! {
+        SuspenseBoundary { fallback,
+            SourceFetcherInner {
+                src_info,
+                dst_info,
+                old,
+                new,
+                path,
+            }
+        }
     }
 }
 
-#[function_component]
-fn SourceFetcherInner(props: &SourceFetcherProps) -> HtmlResult {
+/// Navigates to the given route once rendered.
+#[component]
+fn Redirect(to: Route) -> Element {
+    let navigator = use_navigator();
+    use_effect(use_reactive!(|to| {
+        navigator.replace(to);
+    }));
+    rsx! {}
+}
+
+/// Builds the handler that navigates to the selected crate versions, keeping the current file.
+fn navigate_to_versions(path: Utf8PathBuf) -> impl FnMut(VersionSelection) {
+    let navigator = navigator();
+    move |((src_name, old), (dst_name, new)): VersionSelection| {
+        navigator.push(
+            Route::File {
+                old_krate: src_name,
+                new_krate: dst_name,
+                old_version: old.into(),
+                new_version: new.into(),
+                path: path.clone().into(),
+            }
+            .simplify(),
+        );
+    }
+}
+
+#[component]
+fn SourceFetcherInner(
+    src_info: Arc<CrateResponse>,
+    dst_info: Arc<CrateResponse>,
+    old: VersionInfo,
+    new: VersionInfo,
+    path: Option<Utf8PathBuf>,
+) -> Element {
     // fetch old version source
-    let old = use_future_with(props.old.clone(), |version| async move {
-        CRATE_SOURCE_CACHE.fetch_cached(&version).await
-    })?;
+    let old_source = use_resource(use_reactive!(|old| async move {
+        CRATE_SOURCE_CACHE.fetch_cached(&old).await
+    }));
 
     // fetch new version source
-    let new = use_future_with(props.new.clone(), |version| async move {
-        CRATE_SOURCE_CACHE.fetch_cached(&version).await
-    })?;
+    let new_source = use_resource(use_reactive!(|new| async move {
+        CRATE_SOURCE_CACHE.fetch_cached(&new).await
+    }));
 
-    let navigator = use_navigator().unwrap();
-    let (old, new) = match (&*old, &*new) {
-        (Ok(old), Ok(new)) => (old, new),
+    let old_source = old_source.suspend()?;
+    let new_source = new_source.suspend()?;
+
+    let (old_source, new_source) = match (&*old_source.read(), &*new_source.read()) {
+        (Ok(old_source), Ok(new_source)) => (old_source.clone(), new_source.clone()),
         (Err(error), _) | (_, Err(error)) => {
-            return Ok(html! {
-                <>
-                <ComplexNavbar
-                    src_name={props.src_info.krate.id.clone()}
-                    dst_name={props.dst_info.krate.id.clone()}
-                    old={props.old.version.clone()}
-                    new={props.new.version.clone()}
-                    src_info={props.src_info.clone()}
-                    dst_info={props.dst_info.clone()}
-                    onchange={
-                        let path = props.path.clone();
-                        move |((src_name, old), (dst_name, new)): ((String, Version), (String, Version))| {
-                            navigator.push(&Route::File {
-                                old_krate: src_name.clone(),
-                                new_krate: dst_name.clone(),
-                                old_version: old.clone().into(),
-                                new_version: new.clone().into(),
-                                path: path.clone().unwrap_or_default().into(),
-                            });
-                        }
-                    }
-                />
-                <Content>
-                    <Center>
-                        <Error title={"Loading crate"} status={format!("Error: {error}")} />
-                    </Center>
-                </Content>
-                </>
-            })
-        }
-    };
-
-    dbg!(&props.path);
-    let path = match &props.path {
-        None => {
-            return Ok(html! {
-                <Redirect<Route> to={Route::File {
-                    old_krate: props.src_info.krate.id.clone(),
-                    new_krate: props.dst_info.krate.id.clone(),
-                    old_version: props.old.version.clone().into(),
-                    new_version: props.new.version.clone().into(),
-                    path: "Cargo.toml".into(),
-                }} />
-            })
-        }
-        Some(path) => path.clone(),
-    };
-
-    Ok(html! {
-        <div class="">
-            <SourceView
-                src_info={props.src_info.clone()}
-                dst_info={props.dst_info.clone()}
-                {old}
-                {new}
-                {path}
-            />
-        </div>
-    })
-}
-
-#[derive(Properties, PartialEq, Clone)]
-pub struct SourceViewProps {
-    pub src_info: Arc<CrateResponse>,
-    pub dst_info: Arc<CrateResponse>,
-    pub old: Arc<CrateSource>,
-    pub new: Arc<CrateSource>,
-    pub path: Utf8PathBuf,
-}
-
-#[function_component]
-pub fn SourceView(props: &SourceViewProps) -> Html {
-    let diff = use_memo((props.old.clone(), props.new.clone()), |(old, new)| {
-        VersionDiff::new(old.clone(), new.clone())
-    });
-    let navigator = use_navigator().unwrap();
-    html! {
-        <>
-            <ComplexNavbar
-                src_name={props.src_info.krate.id.clone()}
-                dst_name={props.dst_info.krate.id.clone()}
-                old={props.old.version.version.clone()}
-                new={props.new.version.version.clone()}
-                src_info={props.src_info.clone()}
-                dst_info={props.dst_info.clone()}
-                onchange={
-                    let path = props.path.clone();
-                    let navigator = navigator;
-                    move |((src_name, old), (dst_name, new)): ((String, Version), (String, Version))| {
-                        navigator.push(&Route::File {
-                            old_krate: src_name.clone(),
-                            new_krate: dst_name.clone(),
-                            old_version: old.clone().into(),
-                            new_version: new.clone().into(),
-                            path: path.clone(),
-                        });
+            return rsx! {
+                ComplexNavbar {
+                    src_name: src_info.krate.id.clone(),
+                    dst_name: dst_info.krate.id.clone(),
+                    old: old.version.clone(),
+                    new: new.version.clone(),
+                    src_info: src_info.clone(),
+                    dst_info: dst_info.clone(),
+                    onchange: navigate_to_versions(path.clone().unwrap_or_default()),
+                }
+                Content {
+                    Center {
+                        Error { title: "Loading crate", status: "Error: {error}" }
                     }
                 }
-            />
-            <Content>
-                <main class="flex flex-col md:flex-row gap-2 lg:gap-4 p-2">
-                    <nav id="files" class="md:w-72 lg:w-84 xl:w-96" aria-label="Files">
-                        <FileTree
-                            diff={diff.clone()}
-                            path={props.path.clone()}
-                        />
-                    </nav>
-                    <div id="diff-view" class="flex-1">
-                        <DiffView {diff} path={props.path.clone()} />
-                    </div>
-                </main>
-            </Content>
-        </>
+            };
+        }
+    };
+
+    dbg!(&path);
+    let path = match path {
+        None => {
+            return rsx! {
+                Redirect {
+                    to: Route::File {
+                        old_krate: src_info.krate.id.clone(),
+                        new_krate: dst_info.krate.id.clone(),
+                        old_version: old.version.clone().into(),
+                        new_version: new.version.clone().into(),
+                        path: "Cargo.toml".into(),
+                    }
+                        .simplify(),
+                }
+            }
+        }
+        Some(path) => path,
+    };
+
+    rsx! {
+        div { class: "",
+            SourceView {
+                src_info,
+                dst_info,
+                old: old_source,
+                new: new_source,
+                path,
+            }
+        }
+    }
+}
+
+#[component]
+pub fn SourceView(
+    src_info: Arc<CrateResponse>,
+    dst_info: Arc<CrateResponse>,
+    old: Arc<CrateSource>,
+    new: Arc<CrateSource>,
+    path: Utf8PathBuf,
+) -> Element {
+    let diff = use_memo(use_reactive!(|old, new| Rc::new(VersionDiff::new(
+        old, new
+    ))));
+    rsx! {
+        ComplexNavbar {
+            src_name: src_info.krate.id.clone(),
+            dst_name: dst_info.krate.id.clone(),
+            old: old.version.version.clone(),
+            new: new.version.version.clone(),
+            src_info: src_info.clone(),
+            dst_info: dst_info.clone(),
+            onchange: navigate_to_versions(path.clone()),
+        }
+        Content {
+            main { class: "flex flex-col md:flex-row gap-2 lg:gap-4 p-2",
+                nav {
+                    id: "files",
+                    class: "md:w-72 lg:w-84 xl:w-96",
+                    aria_label: "Files",
+                    FileTree { diff: diff(), path: path.clone() }
+                }
+                div { id: "diff-view", class: "flex-1",
+                    DiffView { diff: diff(), path }
+                }
+            }
+        }
     }
 }

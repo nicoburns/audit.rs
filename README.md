@@ -7,8 +7,8 @@ deployed at [diff.rs](https://diff.rs).
 
 ## How it works
 
-It uses [Yew](https://yew.rs) as the reactive frontend framework, and [Tailwind
-CSS](https://tailwindcss.com) for the styling.
+It uses [Dioxus](https://dioxuslabs.com) as the reactive frontend framework,
+and [Tailwind CSS](https://tailwindcss.com) for the styling.
 
 The code in this repository compiles into a WebAssembly binary that runs in the
 browser. Since it only talks to the [crates.io](https://crates.io) API, it does
@@ -22,30 +22,31 @@ it works.
 You need a recent version of Rust, which is most easily installed with
 [rustup.rs](https://rustup.rs).
 
-In addition, you will also need [Trunk](https://trunkrs.dev/), which is a tool
-that helps to build Rust WebAssembly applications, and the WebAssembly build
-target for Rust.  You can install it like this:
+In addition, you will also need the [Dioxus CLI](https://dioxuslabs.com) (`dx`),
+which builds and bundles Dioxus applications, and the WebAssembly build target
+for Rust. The version of `dx` must match the version of the `dioxus` crate.
+You can install it like this:
 
 ```
-cargo install trunk
+cargo install dioxus-cli --version 0.8.0-alpha.3 --locked
 rustup target add wasm32-unknown-unknown
 ```
 
-You can then use trunk to launch a local server with hot-reloading for
+You can then use `dx` to launch a local server with hot-reloading for
 development purposes:
 
 ```
-trunk serve
+dx serve --web
 ```
 
 You can also use it to build an optimized release version. This will place the
-build output into the `dist` folder. The `--release` flag enables some
+build output into the `dist/public` folder. The `--release` flag enables some
 optimization, both building the Rust code in release mode, and running
 `wasm-opt` for further size savings. You might see a large speedup from running
 it this way.
 
 ```
-trunk build --release
+dx bundle --web --release --out-dir dist
 ```
 
 ## How it is deployed

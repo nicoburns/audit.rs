@@ -1,0 +1,18 @@
+[application]
+name = "diff-rs"
+# output directory for `dx bundle`
+out_dir = "dist"
+# static files copied as-is into the root of the output
+public_dir = "static"
+
+[web.app]
+title = "Diff.rs: Explore Changes Between Rust Crate Versions"
+
+[web.wasm_opt]
+# optimize the webassembly output for size
+level = "z"
+
+[web.watcher]
+# serve index.html for unknown paths, required for client-side routing
+index_on_404 = true
+watch_path = ["src", "static", "tailwind.css", "tailwind.config.js", "index.html"]

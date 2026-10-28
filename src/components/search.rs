@@ -1,9 +1,15 @@
 use crate::{
-    data::{CrateDetail, SearchResponse, SummaryCategory, SummaryResponse},
+    cache::SUMMARY_CACHE,
+    components::Loading,
+    data::{CrateDetail, SearchResponse, SummaryCategory},
     Route,
 };
-use dioxus::prelude::*;
+use dioxus::{core::Task, prelude::*};
 use gloo_net::http::Request;
+use gloo_timers::future::TimeoutFuture;
+
+/// How long the search input has to be stable before it is reported as changed.
+const DEBOUNCE_MILLIS: u32 = 250;
 
 #[component]
 pub(super) fn SearchGlass() -> Element {
@@ -27,6 +33,7 @@ pub(super) fn SearchGlass() -> Element {
 
 #[component]
 pub fn SearchBar(value: String, onchange: Option<EventHandler<String>>) -> Element {
+    let mut pending = use_signal(|| None::<Task>);
     rsx! {
         form {
             class: "max-w-xl mx-auto p-4",
@@ -53,9 +60,17 @@ pub fn SearchBar(value: String, onchange: Option<EventHandler<String>>) -> Eleme
                         let _ = event.set_focus(true).await;
                     },
                     oninput: move |event: FormEvent| {
-                        if let Some(onchange) = onchange {
-                            onchange.call(event.value());
+                        let value = event.value();
+                        if let Some(task) = pending.take() {
+                            task.cancel();
                         }
+                        let task = spawn(async move {
+                            TimeoutFuture::new(DEBOUNCE_MILLIS).await;
+                            if let Some(onchange) = onchange {
+                                onchange.call(value);
+                            }
+                        });
+                        pending.set(Some(task));
                     },
                 }
                 button {
@@ -97,18 +112,10 @@ pub fn Search() -> Element {
 
 #[component]
 pub fn SearchResults(query: String) -> Element {
-    rsx! {
-        SuspenseBoundary { fallback: |_| rsx! { div {} },
-            if !query.is_empty() {
-                SearchResultsLoader { query }
-            }
-        }
-    }
-}
-
-#[component]
-pub fn SearchResultsLoader(query: String) -> Element {
     let info = use_resource(use_reactive!(|query| async move {
+        if query.is_empty() {
+            return Ok(SearchResponse { crates: vec![] });
+        }
         let response = Request::get("https://crates.io/api/v1/crates")
             .query([("q", query.as_str())])
             .build()?
@@ -116,19 +123,19 @@ pub fn SearchResultsLoader(query: String) -> Element {
             .await?;
         let text = response.json::<SearchResponse>().await?;
         Ok(text) as anyhow::Result<SearchResponse>
-    }))
-    .suspend()?;
+    }));
 
     let info = info.read();
     match &*info {
-        Ok(response) => rsx! {
+        None => rsx! {},
+        Some(Ok(response)) => rsx! {
             div { class: "flex flex-col gap-2 my-4",
                 for c in response.crates.iter() {
                     Card { key: "{c.id}", details: c.clone() }
                 }
             }
         },
-        Err(error) => rsx! {
+        Some(Err(error)) => rsx! {
             "Error: "
             {format!("{error:?}")}
         },
@@ -194,29 +201,31 @@ fn Card(details: CrateDetail) -> Element {
 
 #[component]
 pub fn SummaryLoader(category: Vec<SummaryCategory>) -> Element {
-    let info = use_resource(|| async move {
-        let response = Request::get("https://crates.io/api/v1/summary")
-            .build()?
-            .send()
-            .await?;
-        let text = response.json::<SummaryResponse>().await?;
-        Ok(text) as anyhow::Result<SummaryResponse>
-    })
-    .suspend()?;
+    let info = use_resource(|| SUMMARY_CACHE.fetch_cached());
+    let cached = SUMMARY_CACHE.cached();
+    if cached.is_none() {
+        info.suspend()?;
+    }
 
     let info = info.read();
-    match &*info {
-        Ok(response) => rsx! {
-            section { class: "summary",
-                for category in category.iter().copied() {
-                    SummaryColumn { category, crates: response.get(category).clone() }
-                }
+    let response = match (cached, &*info) {
+        (Some(response), _) => response,
+        (None, Some(Ok(response))) => response.clone(),
+        (None, Some(Err(error))) => {
+            return rsx! {
+                "Error: "
+                {format!("{error:?}")}
+            };
+        }
+        (None, None) => return rsx! {},
+    };
+
+    rsx! {
+        section { class: "summary",
+            for category in category.iter().copied() {
+                SummaryColumn { category, crates: response.get(category).clone() }
             }
-        },
-        Err(error) => rsx! {
-            "Error: "
-            {format!("{error:?}")}
-        },
+        }
     }
 }
 
@@ -241,7 +250,12 @@ fn SummaryColumn(category: SummaryCategory, crates: Vec<CrateDetail>) -> Element
 #[component]
 pub fn DefaultSummarySection() -> Element {
     rsx! {
-        SuspenseBoundary { fallback: |_| rsx! { "Loading" },
+        SuspenseBoundary {
+            fallback: |_| rsx! {
+                div { class: "p-8",
+                    Loading { title: "Loading crates", status: "Fetching the latest crates from crates.io" }
+                }
+            },
             SummaryLoader {
                 category: vec![
                     SummaryCategory::MostRecent,

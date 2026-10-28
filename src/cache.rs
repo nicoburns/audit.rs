@@ -52,6 +52,42 @@ impl CrateResponseCache {
     }
 }
 
+/// Crates.io summary cache
+pub struct SummaryCache(Mutex<Option<Arc<SummaryResponse>>>);
+
+/// Global crates.io summary cache instance
+pub static SUMMARY_CACHE: SummaryCache = SummaryCache::new();
+
+impl SummaryCache {
+    /// Create new, empty cache
+    pub const fn new() -> Self {
+        SummaryCache(Mutex::new(None))
+    }
+
+    /// Lookup in cache or fetch
+    pub async fn fetch_cached(&self) -> Result<Arc<SummaryResponse>> {
+        if let Some(summary) = self.cached() {
+            info!("Fetching crates.io summary from cache");
+            return Ok(summary);
+        }
+
+        let summary = Arc::new(SummaryResponse::fetch().await?);
+        *self.0.lock().unwrap() = Some(summary.clone());
+        Ok(summary)
+    }
+
+    /// Lookup in cache
+    pub fn cached(&self) -> Option<Arc<SummaryResponse>> {
+        self.0.lock().unwrap().clone()
+    }
+}
+
+#[test]
+fn test_summary_cache_missing() {
+    let cache = SummaryCache::new();
+    assert!(cache.cached().is_none());
+}
+
 #[test]
 fn test_crate_response_cache_missing() {
     let cache = CrateResponseCache::new();

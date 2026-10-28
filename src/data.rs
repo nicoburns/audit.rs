@@ -62,6 +62,19 @@ impl SummaryCategory {
 }
 
 impl SummaryResponse {
+    /// Fetch the summary of recently published and most downloaded crates.
+    pub async fn fetch() -> Result<Self> {
+        info!("Fetching crates.io summary from network");
+        let response = Request::get("https://crates.io/api/v1/summary")
+            .send()
+            .await?;
+        if response.ok() {
+            Ok(response.json().await?)
+        } else {
+            Err(anyhow!("Error response: {}", response.status()))
+        }
+    }
+
     pub fn get(&self, cat: SummaryCategory) -> &Vec<CrateDetail> {
         match cat {
             SummaryCategory::JustUpdated => &self.just_updated,

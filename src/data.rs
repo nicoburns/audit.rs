@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use similar::{capture_diff_slices, Algorithm, ChangeTag, DiffTag};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     io::Read,
     ops::Range,
     rc::Rc,
@@ -44,6 +44,19 @@ fn line_key(line: &[u8]) -> (&[u8], bool) {
         Some(line) => (line.strip_suffix(b"\r").unwrap_or(line), true),
         None => (line, false),
     }
+}
+
+/// Maps every line to a numeric ID, where lines with the same [`line_key`] get the same ID.
+///
+/// Diffing the IDs is much faster than comparing the lines themselves when many lines changed.
+fn line_ids<'a>(lines: &'a [Bytes], ids: &mut HashMap<(&'a [u8], bool), u32>) -> Vec<u32> {
+    lines
+        .iter()
+        .map(|line| {
+            let next = ids.len() as u32;
+            *ids.entry(line_key(line)).or_insert(next)
+        })
+        .collect()
 }
 
 /// Returns the offset of `inner` within `outer`, if `inner` is a subslice of `outer`.
@@ -486,9 +499,10 @@ impl VersionDiff {
             // generate line diff
             let left_lines = split_lines(&left);
             let right_lines = split_lines(&right);
-            let left_keys: Vec<_> = left_lines.iter().map(|line| line_key(line)).collect();
-            let right_keys: Vec<_> = right_lines.iter().map(|line| line_key(line)).collect();
-            let ops = capture_diff_slices(Algorithm::Myers, &left_keys, &right_keys);
+            let mut ids = HashMap::new();
+            let left_ids = line_ids(&left_lines, &mut ids);
+            let right_ids = line_ids(&right_lines, &mut ids);
+            let ops = capture_diff_slices(Algorithm::Myers, &left_ids, &right_ids);
 
             // collect changes
             let mut changes: Vec<(ChangeTag, Bytes)> = vec![];

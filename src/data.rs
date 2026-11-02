@@ -175,10 +175,20 @@ impl CrateResponse {
         let url = base.join(name)?;
         let response = Request::get(url.as_str()).send().await?;
         if response.ok() {
-            Ok(response.json().await?)
+            let mut response: Self = response.json().await?;
+            response.sort_versions();
+            Ok(response)
         } else {
             Err(anyhow!("Error response: {}", response.status()))
         }
+    }
+
+    /// Sort versions from highest to lowest, using the same precedence as Cargo.
+    ///
+    /// Crates.io returns versions ordered by publish date, which differs from semver order when
+    /// older release lines get backported fixes.
+    pub fn sort_versions(&mut self) {
+        self.versions.sort_by(|a, b| b.version.cmp(&a.version));
     }
 
     pub fn version(&self, version: VersionId) -> Option<&VersionInfo> {

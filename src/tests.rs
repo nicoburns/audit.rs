@@ -5,7 +5,8 @@ use std::fs::File;
 
 fn parse_canned_response(name: &str) -> Result<CrateResponse> {
     let response = File::open(format!("data/{name}.json"))?;
-    let response: CrateResponse = from_reader(response)?;
+    let mut response: CrateResponse = from_reader(response)?;
+    response.sort_versions();
     Ok(response)
 }
 
@@ -37,6 +38,99 @@ fn test_crate_response_decode_reqwest() {
 fn test_crate_response_decode_log() {
     let response = parse_canned_response("log").unwrap();
     assert_eq!(response.krate.id, "log");
+}
+
+#[test]
+fn crate_response_versions_sorted_by_semver() {
+    use crate::version::{VersionId, VersionNamed};
+
+    let response = parse_canned_response("servo-malloc-size-of").unwrap();
+    let versions: Vec<String> = response
+        .versions
+        .iter()
+        .map(|v| v.version.to_string())
+        .collect();
+    assert_eq!(
+        versions,
+        [
+            "0.7.0",
+            "0.6.0",
+            "0.5.0",
+            "0.4.0",
+            "0.3.0",
+            "0.2.0",
+            "0.1.4",
+            "0.1.3",
+            "0.1.2",
+            "0.1.0",
+            "0.1.0-rc2",
+            "0.1.0-rc1",
+        ]
+    );
+    let named = |name| {
+        response
+            .version(VersionId::Named(name))
+            .unwrap()
+            .version
+            .to_string()
+    };
+    assert_eq!(named(VersionNamed::Latest), "0.7.0");
+    assert_eq!(named(VersionNamed::Previous), "0.6.0");
+}
+
+#[test]
+fn crate_response_sorts_prereleases_like_cargo() {
+    // Precedence order from the SemVer spec, which Cargo follows.
+    let expected = [
+        "1.0.0",
+        "1.0.0-rc.1",
+        "1.0.0-beta.11",
+        "1.0.0-beta.2",
+        "1.0.0-beta",
+        "1.0.0-alpha.beta",
+        "1.0.0-alpha.1",
+        "1.0.0-alpha",
+        "0.9.0",
+    ];
+    let mut shuffled = expected.to_vec();
+    shuffled.reverse();
+    shuffled.swap(1, 6);
+    let versions: Vec<_> = shuffled
+        .iter()
+        .map(|num| {
+            serde_json::json!({
+                "checksum": "00",
+                "crate": "test",
+                "dl_path": "",
+                "yanked": false,
+                "num": num,
+            })
+        })
+        .collect();
+    let mut response: CrateResponse = serde_json::from_value(serde_json::json!({
+        "crate": {
+            "id": "test",
+            "max_version": "1.0.0",
+            "max_stable_version": "1.0.0",
+            "newest_version": "1.0.0",
+            "description": "",
+            "downloads": 0,
+            "recent_downloads": null,
+            "exact_match": true,
+            "homepage": null,
+            "repository": null,
+            "documentation": null,
+        },
+        "versions": versions,
+    }))
+    .unwrap();
+    response.sort_versions();
+    let sorted: Vec<String> = response
+        .versions
+        .iter()
+        .map(|v| v.version.to_string())
+        .collect();
+    assert_eq!(sorted, expected);
 }
 
 #[test]
